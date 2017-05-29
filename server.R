@@ -41,11 +41,55 @@ shinyServer(function(input, output, session) {
     })
   })
   
-    
+  react_rain_data <- reactive({
+    if (!is.null(input$rainintensity_date_window)){
+      start_utc = as.POSIXct(input$rainintensity_date_window[1], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      end_utc = as.POSIXct(input$rainintensity_date_window[2], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      start_sys = format(start_utc, tz = Sys.timezone(), usetz = T)
+      end_sys = format(end_utc, tz = Sys.timezone(), usetz = T)
+      rain_subset <- window(rain_data(), start = start_sys, end = end_sys)
+      rain_subset
+    }
+  })
+  
+  react_depth_data <- reactive({
+    if (!is.null(input$depth_date_window)){
+      start_utc = as.POSIXct(input$depth_date_window[1], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      end_utc = as.POSIXct(input$depth_date_window[2], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      start_sys = format(start_utc, tz = Sys.timezone(), usetz = T)
+      end_sys = format(end_utc, tz = Sys.timezone(), usetz = T)
+      depth_subset <- window(depth_data(), start = start_sys, end = end_sys)
+      depth_subset
+    }
+  })
+  
+  react_volume_data <- reactive({
+    if (!is.null(input$volume_date_window)){
+      start_utc = as.POSIXct(input$volume_date_window[1], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      end_utc = as.POSIXct(input$volume_date_window[2], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      start_sys = format(start_utc, tz = Sys.timezone(), usetz = T)
+      end_sys = format(end_utc, tz = Sys.timezone(), usetz = T)
+      volume_subset <- window(volume_data(), start = start_sys, end = end_sys)
+      volume_subset
+    }
+  })
+  
+  react_velocity_data <- reactive({
+    if (!is.null(input$velocity_date_window)){
+      start_utc = as.POSIXct(input$velocity_date_window[1], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      end_utc = as.POSIXct(input$velocity_date_window[2], "%Y-%m-%dT%H:%M:%OSZ", tz = 'UTC')
+      start_sys = format(start_utc, tz = Sys.timezone(), usetz = T)
+      end_sys = format(end_utc, tz = Sys.timezone(), usetz = T)
+      velocity_subset <- window(velocity_data(), start = start_sys, end = end_sys)
+      velocity_subset
+    }
+  })
+  
   output$rainintensity <- renderDygraph({
     withProgress(message = 'Loading graphs',{
       dygraph(rain_data(), group = "sync") %>%
-        dyAxis("y", "Rainfall intensity  (Inches/Hr)")%>%
+        dyAxis("y", "Rainfall intensity  (Inches/Hr)") %>%
+        dySeries(input$rainguage,label="Rainfall intensity  (Inches/Hr)") %>%
         dyOptions(includeZero = TRUE, retainDateWindow = TRUE, plotter = 
                     "function barChartPlotter(e) {
                 var ctx = e.drawingContext;
@@ -74,7 +118,7 @@ shinyServer(function(input, output, session) {
     withProgress(message = 'Loading graphs', {
       dygraph(depth_data(), group = "sync") %>%
         dyAxis("y", "Depth (Ft)")%>%
-        dySeries(input$flowmeters,label="Observed") %>%
+        dySeries(input$flowmeters,label="Depth (Ft)") %>%
         dyOptions(includeZero = TRUE, retainDateWindow = TRUE, colors = "green")
     })
   })
@@ -83,7 +127,7 @@ shinyServer(function(input, output, session) {
     withProgress(message = 'Loading graphs',{
       dygraph(volume_data(), group = "sync") %>%
         dyAxis("y", "Flow (MGD)")%>%
-        dySeries(input$flowmeters,label="Observed") %>%
+        dySeries(input$flowmeters,label="Flow (MGD)") %>%
         dyOptions(includeZero = TRUE, retainDateWindow = TRUE, colors = "green")
     })
   })
@@ -92,9 +136,88 @@ shinyServer(function(input, output, session) {
     withProgress(message = 'Loading graphs', {
       dygraph(velocity_data(), group = "sync") %>%
         dyAxis("y", "Velocity (Ft / Sec)")%>%
-        dySeries(input$flowmeters,label="Observed") %>%
+        dySeries(input$flowmeters,label="Velocity (Ft / Sec)") %>%
         dyOptions(includeZero = TRUE, retainDateWindow = TRUE, colors = "green")
     })
   })
   
+  output$rainfallstats <- renderText({
+    paste0(
+      "<br>",
+      "<b>Min: <b>",
+      if (!is.null(react_rain_data())){
+        sapply(sapply(react_rain_data(), min, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Max: <b>",
+      if (!is.null(react_rain_data())){
+        sapply(sapply(react_rain_data(), max, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Mean: <b>",
+      if (!is.null(react_rain_data())){
+        sapply(sapply(react_rain_data(), mean, na.rm = TRUE), signif, 3)
+      }
+    )
+  })
+  
+  output$depthstats <- renderText({
+    paste0(
+      "<br>",
+      "<b>Min: <b>",
+      if (!is.null(react_depth_data())){
+        sapply(sapply(react_depth_data(), min, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Max: <b>",
+      if (!is.null(react_depth_data())){
+        sapply(sapply(react_depth_data(), max, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Mean: <b>",
+      if (!is.null(react_depth_data())){
+        sapply(sapply(react_depth_data(), mean, na.rm = TRUE), signif, 3)
+      }
+    )
+  })
+  
+  output$volumestats <- renderText({
+    paste0(
+      "<br>",
+      "<b>Min: <b>",
+      if (!is.null(react_volume_data())){
+        sapply(sapply(react_volume_data(), min, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Max: <b>",
+      if (!is.null(react_volume_data())){
+        sapply(sapply(react_volume_data(), max, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Mean: <b>",
+      if (!is.null(react_volume_data())){
+        sapply(sapply(react_volume_data(), mean, na.rm = TRUE), signif, 3)
+      }
+    )
+  })
+  
+  output$velocitystats <- renderText({
+    paste0(
+      "<br>",
+      "<b>Min: <b>",
+      if (!is.null(react_velocity_data())){
+        sapply(sapply(react_velocity_data(), min, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Max: <b>",
+      if (!is.null(react_velocity_data())){
+        sapply(sapply(react_velocity_data(), max, na.rm = TRUE), signif, 3)
+      },
+      "<br>",
+      "<b>Mean: <b>",
+      if (!is.null(react_velocity_data())){
+        sapply(sapply(react_velocity_data(), mean, na.rm = TRUE), signif, 3)
+      }
+    )
+  })
 })
